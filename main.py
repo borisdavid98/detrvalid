@@ -105,11 +105,11 @@ def get_args_parser():
 def main(args):
     utils.init_distributed_mode(args)
     print("git:\n  {}\n".format(utils.get_sha()))
-
+    
     if args.frozen_weights is not None:
         assert args.masks, "Frozen training is meant for segmentation only"
     print(args)
-
+    
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
@@ -120,7 +120,7 @@ def main(args):
 
     model, criterion, postprocessors = build_model(args)
     model.to(device)
-
+    
     model_without_ddp = model
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
