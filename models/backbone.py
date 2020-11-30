@@ -11,6 +11,11 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
+import tensorflow
+from tensorflow.keras.applications import efficientnet
+
+from efficientnet_pytorch import EfficientNet
+
 from util.misc import NestedTensor, is_main_process
 
 from .position_encoding import build_position_encoding
@@ -66,6 +71,8 @@ class BackboneBase(nn.Module):
             return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
         else:
             return_layers = {'layer4': "0"}
+        if type(backbone) == EfficientNet:
+            return_layers = {'_blocks': "0"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -86,9 +93,12 @@ class Backbone(BackboneBase):
                  train_backbone: bool,
                  return_interm_layers: bool,
                  dilation: bool):
-        backbone = getattr(torchvision.models, name)(
-            replace_stride_with_dilation=[False, False, dilation],
-            pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)
+        if name == 'EfficientNetB0':
+          backbone = EfficientNet.from_name('efficientnet-b0')
+        else:      
+          backbone = getattr(torchvision.models, name)(
+              replace_stride_with_dilation= [False, False, dilation],
+              pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)         
         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 
