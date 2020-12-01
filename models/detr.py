@@ -16,7 +16,7 @@ from .matcher import build_matcher
 from .segmentation import (DETRsegm, PostProcessPanoptic, PostProcessSegm,
                            dice_loss, sigmoid_focal_loss)
 from .transformer import build_transformer
-
+from efficientnet_pytorch import EfficientNet
 
 class DETR(nn.Module):
     """ This is the DETR module that performs object detection """
@@ -320,14 +320,25 @@ def build(args):
     backbone = build_backbone(args)
 
     transformer = build_transformer(args)
-
-    model = DETR(
-        backbone,
-        transformer,
-        num_classes=num_classes,
-        num_queries=args.num_queries,
-        aux_loss=args.aux_loss,
-    )
+    
+    if args.backbone == 'efficientnet-b0':
+      efficientnet_py = EfficientNet.from_pretrained('efficientnet-b0')
+      hidden_dim = 256
+      backbone = efficientnet_py
+      pos_enc = PositionEmbeddingSine(hidden_dim // 2, normalize=True)
+      backbone_with_pos_enc = Joiner(backbone, pos_enc)
+      #backbone_with_pos_enc.num_channels = backbone.num_channels
+      backbone_with_pos_enc.num_channels = 2048
+      transformer = Transformer(d_model=hidden_dim, return_intermediate_dec=True)
+      model = DETR(backbone_with_pos_enc, transformer, num_classes=91, num_queries=100)
+    else:
+      model = DETR(
+          backbone,
+          transformer,
+          num_classes=num_classes,
+         num_queries=args.num_queries,
+         aux_loss=args.aux_loss,
+      )
     if args.masks:
         model = DETRsegm(model, freeze_detr=(args.frozen_weights is not None))
     matcher = build_matcher(args)
