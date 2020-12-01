@@ -94,7 +94,7 @@ class Backbone(BackboneBase):
                  return_interm_layers: bool,
                  dilation: bool):
         if name == 'EfficientNetB0':
-          backbone = EfficientNet.from_name('efficientnet-b0')
+          backbone = EfficientNet.from_pretrained('efficientnet-b0')
         else:      
           backbone = getattr(torchvision.models, name)(
               replace_stride_with_dilation= [False, False, dilation],
