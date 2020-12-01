@@ -316,10 +316,6 @@ def build(args):
         # max_obj_id + 1, but the exact value doesn't really matter
         num_classes = 250
     device = torch.device(args.device)
-
-    backbone = build_backbone(args)
-
-    transformer = build_transformer(args)
     
     if args.backbone == 'efficientnet-b0':
       efficientnet_py = EfficientNet.from_pretrained('efficientnet-b0')
@@ -332,6 +328,8 @@ def build(args):
       transformer = Transformer(d_model=hidden_dim, return_intermediate_dec=True)
       model = DETR(backbone_with_pos_enc, transformer, num_classes=91, num_queries=100)
     else:
+    backbone = build_backbone(args)
+    transformer = build_transformer(args)
       model = DETR(
           backbone,
           transformer,
