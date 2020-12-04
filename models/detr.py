@@ -328,8 +328,8 @@ def build(args):
       transformer = Transformer(d_model=hidden_dim, return_intermediate_dec=True)
       model = DETR(backbone_with_pos_enc, transformer, num_classes=91, num_queries=100)
     else:
-    backbone = build_backbone(args)
-    transformer = build_transformer(args)
+      backbone = build_backbone(args)
+      transformer = build_transformer(args)
       model = DETR(
           backbone,
           transformer,
