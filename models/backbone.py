@@ -72,7 +72,10 @@ class BackboneBase(nn.Module):
         else:
             return_layers = {'layer4': "0"}
         if type(backbone) == EfficientNet:
-            return_layers = {'_blocks': "0"}
+            return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3",
+                              "layer5": "4", "layer6": "5", "layer7": "6", "layer8": "7",
+                              "layer9": "8", "layer10": "9", "layer11": "8", "layer12": "11",
+                              "layer13": "12", "layer14": "13", "layer15": "14", "layer16": "15"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -95,11 +98,13 @@ class Backbone(BackboneBase):
                  dilation: bool):
         if name == 'EfficientNetB0':
           backbone = EfficientNet.from_pretrained('efficientnet-b0')
+          separateblocksbo(backbone)
+          num_channels = 1280
         else:      
           backbone = getattr(torchvision.models, name)(
               replace_stride_with_dilation= [False, False, dilation],
               pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)         
-        num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
+          num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 
 
@@ -118,12 +123,33 @@ class Joiner(nn.Sequential):
 
         return out, pos
 
+def separateblocksbo(obj):
+    names = [name for name, _ in obj.named_children()]
+    names.reverse()
+    l = []
+    namesremoved = []
+    for name in names:
+      if name == '_blocks':
+        block = obj._modules.pop(name)
+        break
+      l.append(obj._modules.pop(name))
+      namesremoved.append(name)
+    
+    namesblock = [name for name, _ in block.named_children()]
+    for i,name in enumerate(namesblock):
+      obj._modules["layer" + str(i)] = block._modules[name]
+
+    l.reverse()
+    namesremoved.reverse()
+    for j,mod in enumerate(l):
+      obj._modules[namesremoved[j]] = l[j]
 
 def build_backbone(args):
     position_embedding = build_position_encoding(args)
     train_backbone = args.lr_backbone > 0
     return_interm_layers = args.masks
     backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
+    
     model = Joiner(backbone, position_embedding)
     model.num_channels = backbone.num_channels
     return model
