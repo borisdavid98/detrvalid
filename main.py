@@ -193,7 +193,7 @@ def main(args):
         test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
                                               data_loader_val, base_ds, device, args.output_dir)
         validation_stats, coco_evaluator_validation = evaluate(model, criterion, postprocessors,
-                                              data_loader_validation, base_ds_validation, device, args.output_dir)                                      
+                                              data_loader_validation, base_ds_validation, device, args.output_dir, "validation")                                      
         if args.output_dir:
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
             utils.save_on_master(coco_evaluator_validation.coco_eval["bbox"].eval, output_dir / "validation.pth")
@@ -226,7 +226,7 @@ def main(args):
             model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
         )
         validation_stats, coco_evaluator_validation = evaluate(
-            model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir
+            model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
         )
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
