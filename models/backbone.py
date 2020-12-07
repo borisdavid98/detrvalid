@@ -71,11 +71,12 @@ class BackboneBase(nn.Module):
             return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
         else:
             return_layers = {'layer4': "0"}
+        print(type(backbone))
         if type(backbone) == EfficientNet:
-            return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3",
-                              "layer5": "4", "layer6": "5", "layer7": "6", "layer8": "7",
-                              "layer9": "8", "layer10": "9", "layer11": "8", "layer12": "11",
-                              "layer13": "12", "layer14": "13", "layer15": "14", "layer16": "15"}
+            return_layers = { "layer0": "0", "layer1": "1", "layer2": "2", "layer3": "3",
+                              "layer4": "4", "layer5": "5", "layer6": "6", "layer7": "7",
+                              "layer8": "7", "layer9": "9", "layer10": "10", "layer11": "11",
+                              "layer12": "11", "layer13": "13", "layer14": "14", "layer15": "15"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -99,7 +100,7 @@ class Backbone(BackboneBase):
         if name == 'EfficientNetB0':
           backbone = EfficientNet.from_pretrained('efficientnet-b0')
           separateblocksbo(backbone)
-          num_channels = 1280
+          num_channels = 320
         else:      
           backbone = getattr(torchvision.models, name)(
               replace_stride_with_dilation= [False, False, dilation],
@@ -114,6 +115,9 @@ class Joiner(nn.Sequential):
 
     def forward(self, tensor_list: NestedTensor):
         xs = self[0](tensor_list)
+
+        torch.save(xs, 'xs.pt')
+
         out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
