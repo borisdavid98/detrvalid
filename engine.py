@@ -67,16 +67,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
 
 @torch.no_grad()
-def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, name = "test"):
+def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, validation = "test"):
     model.eval()
     criterion.eval()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     
-    if  name == "Test":
-      header = 'Test:'
-    if name == "Validation": 
+    header = 'Test:'
+    if validation == "validation": 
       header = 'Validation:'
 
     iou_types = tuple(k for k in ('segm', 'bbox') if k in postprocessors.keys())
