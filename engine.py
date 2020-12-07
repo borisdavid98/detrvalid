@@ -29,7 +29,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        # torch.save(samples, 'file.pt')
+        torch.save(samples, 'file.pt')
 
         outputs = model(samples)
         loss_dict = criterion(outputs, targets)
