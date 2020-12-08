@@ -116,8 +116,6 @@ class Joiner(nn.Sequential):
     def forward(self, tensor_list: NestedTensor):
         xs = self[0](tensor_list)
 
-        torch.save(xs, 'xs.pt')
-
         out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
