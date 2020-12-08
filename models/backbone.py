@@ -11,9 +11,6 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
-import tensorflow
-from tensorflow.keras.applications import efficientnet
-
 from efficientnet_pytorch import EfficientNet
 
 from util.misc import NestedTensor, is_main_process
