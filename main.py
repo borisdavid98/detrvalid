@@ -237,7 +237,7 @@ def main(args):
             model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
         )
 		
-	if args.validation:
+        if args.validation:
             validation_stats, coco_evaluator_validation = evaluate(
 		model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
 	    )
