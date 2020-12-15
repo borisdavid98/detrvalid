@@ -84,32 +84,35 @@ def get_args_parser():
     parser.add_argument('--coco_panoptic_path', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
 
-    parser.add_argument('--output-dir', default='',
+    parser.add_argument('--output_dir', default='',
                         help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--resume', default='', help='resume from checkpoint')
-    parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--num_workers', default=2, type=int)
 
+	# New dataset parameter
+	parser.add_argument('--validation', action='store_true', help='set if there is a validation set')
+
     # distributed training parameters
-    parser.add_argument('--world-size', default=1, type=int,
+    parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     return parser
 
 
 def main(args):
     utils.init_distributed_mode(args)
     print("git:\n  {}\n".format(utils.get_sha()))
-
+    
     if args.frozen_weights is not None:
         assert args.masks, "Frozen training is meant for segmentation only"
     print(args)
-
+    
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
@@ -120,7 +123,7 @@ def main(args):
 
     model, criterion, postprocessors = build_model(args)
     model.to(device)
-
+    
     model_without_ddp = model
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
@@ -141,13 +144,19 @@ def main(args):
 
     dataset_train = build_dataset(image_set='train', args=args)
     dataset_val = build_dataset(image_set='val', args=args)
+    if args.validation:
+		dataset_validation = build_dataset(image_set='validation', args=args)
 
     if args.distributed:
         sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val, shuffle=False)
+        if args.validation:
+			sampler_validation = DistributedSampler(dataset_validation, shuffle=False)
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
+        if args.validation:
+			sampler_validation = torch.utils.data.SequentialSampler(dataset_validation)
 
     batch_sampler_train = torch.utils.data.BatchSampler(
         sampler_train, args.batch_size, drop_last=True)
@@ -156,13 +165,21 @@ def main(args):
                                    collate_fn=utils.collate_fn, num_workers=args.num_workers)
     data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
                                  drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
+    if args.validation:
+		data_loader_validation = DataLoader(dataset_validation, args.batch_size, sampler=sampler_validation,
+                                 drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
 
     if args.dataset_file == "coco_panoptic":
         # We also evaluate AP during panoptic training, on original coco DS
         coco_val = datasets.coco.build("val", args)
         base_ds = get_coco_api_from_dataset(coco_val)
+        if args.validation:
+			coco_validation = datasets.coco.build("validation", args)
+			base_ds_validation = get_coco_api_from_dataset(coco_validation)
     else:
         base_ds = get_coco_api_from_dataset(dataset_val)
+        if args.validation:
+			base_ds_validation = get_coco_api_from_dataset(dataset_validation)
 
     if args.frozen_weights is not None:
         checkpoint = torch.load(args.frozen_weights, map_location='cpu')
@@ -184,8 +201,13 @@ def main(args):
     if args.eval:
         test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
                                               data_loader_val, base_ds, device, args.output_dir)
+        if args.validation:
+			validation_stats, coco_evaluator_validation = evaluate(model, criterion, postprocessors,
+                                              data_loader_validation, base_ds_validation, device, args.output_dir, "validation")                                      
         if args.output_dir:
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
+            if args.validation:
+				utils.save_on_master(coco_evaluator_validation.coco_eval["bbox"].eval, output_dir / "validation.pth")
         return
 
     print("Start training")
@@ -200,7 +222,7 @@ def main(args):
         if args.output_dir:
             checkpoint_paths = [output_dir / 'checkpoint.pth']
             # extra checkpoint before LR drop and every 100 epochs
-            if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 100 == 0:
+            if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 50 == 0:
                 checkpoint_paths.append(output_dir / f'checkpoint{epoch:04}.pth')
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({
@@ -214,8 +236,18 @@ def main(args):
         test_stats, coco_evaluator = evaluate(
             model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
         )
-
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+		
+		if args.validation:
+			validation_stats, coco_evaluator_validation = evaluate(
+				model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
+			)
+			log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                     **{f'test_{k}': v for k, v in test_stats.items()},
+                     **{f'validation_{k}': v for k, v in validation_stats.items()},
+                     'epoch': epoch,
+                     'n_parameters': n_parameters}
+         else:
+			log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      **{f'test_{k}': v for k, v in test_stats.items()},
                      'epoch': epoch,
                      'n_parameters': n_parameters}
@@ -228,16 +260,29 @@ def main(args):
             if coco_evaluator is not None:
                 (output_dir / 'eval').mkdir(exist_ok=True)
                 if "bbox" in coco_evaluator.coco_eval:
-                    filenames = ['latest.pth']
+                    filenames = ['latest_test.pth']
                     if epoch % 50 == 0:
                         filenames.append(f'{epoch:03}.pth')
                     for name in filenames:
                         torch.save(coco_evaluator.coco_eval["bbox"].eval,
                                    output_dir / "eval" / name)
+                              
+            # for validation logs
+            if args.validation:
+				if coco_evaluator_validation is not None:
+					(output_dir / 'eval').mkdir(exist_ok=True)
+					if "bbox" in coco_evaluator_validation.coco_eval:
+						filenames = ['latest_valid.pth']
+						if epoch % 50 == 0:
+							filenames.append(f'{epoch:03}.pth')
+						for name in filenames:
+							torch.save(coco_evaluator_validation.coco_eval["bbox"].eval,
+                                   output_dir / "eval" / name)
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+
 
 
 if __name__ == '__main__':
