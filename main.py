@@ -145,18 +145,18 @@ def main(args):
     dataset_train = build_dataset(image_set='train', args=args)
     dataset_val = build_dataset(image_set='val', args=args)
     if args.validation:
-	dataset_validation = build_dataset(image_set='validation', args=args)
+        dataset_validation = build_dataset(image_set='validation', args=args)
 
     if args.distributed:
-        sampler_train = DistributedSampler(dataset_train)
+       	sampler_train = DistributedSampler(dataset_train)
         sampler_val = DistributedSampler(dataset_val, shuffle=False)
         if args.validation:
-		sampler_validation = DistributedSampler(dataset_validation, shuffle=False)
+                sampler_validation = DistributedSampler(dataset_validation, shuffle=False)
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
         if args.validation:
-		sampler_validation = torch.utils.data.SequentialSampler(dataset_validation)
+                sampler_validation = torch.utils.data.SequentialSampler(dataset_validation)
 
     batch_sampler_train = torch.utils.data.BatchSampler(
         sampler_train, args.batch_size, drop_last=True)
@@ -166,7 +166,7 @@ def main(args):
     data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
                                  drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
     if args.validation:
-	data_loader_validation = DataLoader(dataset_validation, args.batch_size, sampler=sampler_validation,
+        data_loader_validation = DataLoader(dataset_validation, args.batch_size, sampler=sampler_validation,
                                  drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
 
     if args.dataset_file == "coco_panoptic":
@@ -174,12 +174,12 @@ def main(args):
         coco_val = datasets.coco.build("val", args)
         base_ds = get_coco_api_from_dataset(coco_val)
         if args.validation:
-		coco_validation = datasets.coco.build("validation", args)
-		base_ds_validation = get_coco_api_from_dataset(coco_validation)
+                coco_validation = datasets.coco.build("validation", args)
+                base_ds_validation = get_coco_api_from_dataset(coco_validation)
     else:
         base_ds = get_coco_api_from_dataset(dataset_val)
         if args.validation:
-		base_ds_validation = get_coco_api_from_dataset(dataset_validation)
+                base_ds_validation = get_coco_api_from_dataset(dataset_validation)
 
     if args.frozen_weights is not None:
         checkpoint = torch.load(args.frozen_weights, map_location='cpu')
@@ -202,12 +202,12 @@ def main(args):
         test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
                                               data_loader_val, base_ds, device, args.output_dir)
         if args.validation:
-		validation_stats, coco_evaluator_validation = evaluate(model, criterion, postprocessors,
+            validation_stats, coco_evaluator_validation = evaluate(model, criterion, postprocessors,
                                               data_loader_validation, base_ds_validation, device, args.output_dir, "validation")                                      
         if args.output_dir:
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
             if args.validation:
-		utils.save_on_master(coco_evaluator_validation.coco_eval["bbox"].eval, output_dir / "validation.pth")
+                 utils.save_on_master(coco_evaluator_validation.coco_eval["bbox"].eval, output_dir / "validation.pth")
         return
 
     print("Start training")
@@ -237,20 +237,20 @@ def main(args):
             model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
         )
 		
-		if args.validation:
-			validation_stats, coco_evaluator_validation = evaluate(
-				model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
-			)
-			log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     		**{f'test_{k}': v for k, v in test_stats.items()},
-                     		**{f'validation_{k}': v for k, v in validation_stats.items()},
-                     		'epoch': epoch,
-                     		'n_parameters': n_parameters}
-         else:
-			log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     		**{f'test_{k}': v for k, v in test_stats.items()},
-                     		'epoch': epoch,
-                     		'n_parameters': n_parameters}
+	if args.validation:
+            validation_stats, coco_evaluator_validation = evaluate(
+		model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
+	    )
+	    log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                     	**{f'test_{k}': v for k, v in test_stats.items()},
+                     	**{f'validation_{k}': v for k, v in validation_stats.items()},
+                     	'epoch': epoch,
+                     	'n_parameters': n_parameters}
+        else:
+            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                     	**{f'test_{k}': v for k, v in test_stats.items()},
+                     	'epoch': epoch,
+                     	'n_parameters': n_parameters}
 
         if args.output_dir and utils.is_main_process():
             with (output_dir / "log.txt").open("a") as f:
