@@ -241,11 +241,11 @@ def main(args):
             validation_stats, coco_evaluator_validation = evaluate(
 		model, criterion, postprocessors, data_loader_validation, base_ds_validation, device, args.output_dir, "validation"
 	    )
-	    log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     	**{f'test_{k}': v for k, v in test_stats.items()},
-                     	**{f'validation_{k}': v for k, v in validation_stats.items()},
-                     	'epoch': epoch,
-                     	'n_parameters': n_parameters}
+            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                        **{f'test_{k}': v for k, v in test_stats.items()},
+                        **{f'validation_{k}': v for k, v in validation_stats.items()},
+                        'epoch': epoch,
+                        'n_parameters': n_parameters}
         else:
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      	**{f'test_{k}': v for k, v in test_stats.items()},
@@ -269,15 +269,15 @@ def main(args):
                               
             # for validation logs
             if args.validation:
-		if coco_evaluator_validation is not None:
-			(output_dir / 'eval').mkdir(exist_ok=True)
-			if "bbox" in coco_evaluator_validation.coco_eval:
-				filenames = ['latest_valid.pth']
-				if epoch % 50 == 0:
-					filenames.append(f'{epoch:03}.pth')
-				for name in filenames:
-					torch.save(coco_evaluator_validation.coco_eval["bbox"].eval,
-                                		output_dir / "eval" / name)
+                if coco_evaluator_validation is not None:
+                        (output_dir / 'eval').mkdir(exist_ok=True)
+                        if "bbox" in coco_evaluator_validation.coco_eval:
+                                filenames = ['latest_valid.pth']
+                                if epoch % 50 == 0:
+                                        filenames.append(f'{epoch:03}.pth')
+                                for name in filenames:
+                                        torch.save(coco_evaluator_validation.coco_eval["bbox"].eval,
+                                               output_dir / "eval" / name)
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
