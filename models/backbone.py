@@ -11,7 +11,8 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
-from efficientnet_pytorch import EfficientNet
+#Code about EfficientNet implementation will be set as commentaries
+# from efficientnet_pytorch import EfficientNet
 
 from util.misc import NestedTensor, is_main_process
 
@@ -68,12 +69,11 @@ class BackboneBase(nn.Module):
             return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
         else:
             return_layers = {'layer4': "0"}
-        print(type(backbone))
-        if type(backbone) == EfficientNet:
-            return_layers = { "layer0": "0", "layer1": "1", "layer2": "2", "layer3": "3",
-                              "layer4": "4", "layer5": "5", "layer6": "6", "layer7": "7",
-                              "layer8": "7", "layer9": "9", "layer10": "10", "layer11": "11",
-                              "layer12": "11", "layer13": "13", "layer14": "14", "layer15": "15"}
+        #if type(backbone) == EfficientNet:
+        #    return_layers = { "layer0": "0", "layer1": "1", "layer2": "2", "layer3": "3",
+        #                      "layer4": "4", "layer5": "5", "layer6": "6", "layer7": "7",
+        #                      "layer8": "7", "layer9": "9", "layer10": "10", "layer11": "11",
+        #                      "layer12": "11", "layer13": "13", "layer14": "14", "layer15": "15"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -94,15 +94,15 @@ class Backbone(BackboneBase):
                  train_backbone: bool,
                  return_interm_layers: bool,
                  dilation: bool):
-        if name == 'EfficientNetB0':
-          backbone = EfficientNet.from_pretrained('efficientnet-b0')
-          separateblocksbo(backbone)
-          num_channels = 320
-        else:      
-          backbone = getattr(torchvision.models, name)(
+        # if name == 'EfficientNetB0':
+        #  backbone = EfficientNet.from_pretrained('efficientnet-b0')
+        #  separateblocksbo(backbone)
+        #  num_channels = 320
+        # else:      
+        backbone = getattr(torchvision.models, name)(
               replace_stride_with_dilation= [False, False, dilation],
               pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)         
-          num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
+        num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 
 
